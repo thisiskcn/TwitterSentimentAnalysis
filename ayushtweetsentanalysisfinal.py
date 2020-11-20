@@ -7,58 +7,52 @@ Original file is located at
     https://colab.research.google.com/drive/1uSBP4eyI3cya5FsnIqXOiVqQpHzxbNiC
 """
 
-#Description : Sentiment Analysis Application that parses tweets scraped from twitter using Python
+# This is a Tweet Sentiment Analysis program that parses tweets scraped from twitter using Python, and then tells the user what kind of sentiment 
+# the tweet represents - Positive, Negative or Neutral
 
-#Importing libraries
+# Importing libraries to be used in the code
 import tweepy
 from textblob import TextBlob
 from wordcloud import WordCloud
-import pandas as pd
-import numpy as np
+import numpy as nupy
+import pandas as pand
 import re
 import matplotlib.pyplot as plt
 plt.style.use('fivethirtyeight')
 
-#Loading data
-from google.colab import files
-uploaded = files.upload()
-
-#Getting data
-log = pd.read_csv('Login.csv')
-
-#Twitter API credentials
+# Twitter API credentials
 consumerKey = 'sKK4RcfLdVvfz1sOU6jgez4ch'
 consumerSecret = '23YjSUz1yerd27DfIs63uP2xawAf1loPNdNwg2FvTucd3F4aeh'
 accessToken = '1280815370308386818-tuGw07SclxLMixBDu4Iubwmk9cusMK'
 accessTokenSecret = 'EKRYi2DbjPhocXlqSdrNkl75qxgEmJex9E6kxAlpXX7Sg'
 
-#Creating an authentication object
-authenticate = tweepy.OAuthHandler(consumerKey, consumerSecret)
+# Creating an authentication object
+auth = tweepy.OAuthHandler(consumerKey, consumerSecret)
 
-#Setting access token and access token secret
-authenticate.set_access_token(accessToken, accessTokenSecret)
+# Setting access token and access token secret
+auth.set_access_token(accessToken, accessTokenSecret)
 
-#Creating API object while passing in the auth information
-api = tweepy.API(authenticate, wait_on_rate_limit = True)
+# Creating API object while passing in the auth information
+twtapi = tweepy.API(auth, wait_on_rate_limit = True)
 
-#Extracting data from twitter user
-posts = api.user_timeline(screen_name ="JoeBiden", count= 100, lang = "en", tweet_mode="extended")
+# Extracting data from twitter user
+posts = twtapi.user_timeline(screen_name ="JoeBiden", count= 100, lang = "en", tweet_mode="extended")
 
-#Printing recent tweets
-print("Show 5 recent tweets: \n")
+# Printing recent tweets
+print("Display the 5 most recent tweets: \n")
 i = 1
 for tweet in posts[0:5]:
   print(str(i) + ') ' + tweet.full_text + '\n')
   i = i + 1
 
-#Creating dataframe
-df = pd.DataFrame( [tweet.full_text for tweet in posts], columns=['Tweets'])
+# Creating a dataframe
+dafr = pand.DataFrame( [tweet.full_text for tweet in posts], columns=['Tweets'])
 
-#Show first 5 rows
-df.head()
+# Displaying the first 5 rows
+dafr.head()
 
 # Creating a function to clean the tweets
-def cleanTxt(text):
+def clean(text):
  text = re.sub('@[A-Za-z0–9]+', '', text) #Removing @mentions
  text = re.sub('#', '', text) # Removing '#' hash tag
  text = re.sub('RT[\s]+', '', text) # Removing Retweet
@@ -68,37 +62,29 @@ def cleanTxt(text):
 
 
 # Cleaning the tweets
-df['Tweets'] = df['Tweets'].apply(cleanTxt)
+dafr['Tweets'] = dafr['Tweets'].apply(clean)
 
-# Show the cleaned tweets
-df
+# Displaying the tweets after cleaning data
+dafr
 
 # Creating a function to get the subjectivity
-def getSubjectivity(text):
+def getsubj(text):
    return TextBlob(text).sentiment.subjectivity
 
 # Creating a function to get the polarity
-def getPolarity(text):
+def getpol(text):
    return  TextBlob(text).sentiment.polarity
 
 
 # Creating two new columns 'Subjectivity' & 'Polarity'
-df['Subjectivity'] = df['Tweets'].apply(getSubjectivity)
-df['Polarity'] = df['Tweets'].apply(getPolarity)
+dafr['Subjectivity'] = dafr['Tweets'].apply(getsubj)
+dafr['Polarity'] = dafr['Tweets'].apply(getpol)
 
-# Show the new dataframe with columns 'Subjectivity' & 'Polarity'
-df
-
-# word cloud visualization
-allWords = ' '.join([twts for twts in df['Tweets']])
-wordCloud = WordCloud(width=500, height=300, random_state=21, max_font_size=110).generate(allWords)
-
-plt.imshow(wordCloud, interpolation="bilinear")
-plt.axis('off')
-plt.show()
+# Displaying the new dataframe with columns 'Subjectivity' & 'Polarity'
+dafr
 
 # Creating a function to compute negative (-1), neutral (0) and positive (+1) analysis
-def getAnalysis(score):
+def sentanalysis(score):
 
   if score < 0:
     return 'Negative'
@@ -107,60 +93,70 @@ def getAnalysis(score):
   else:
     return 'Positive'
 
-df['Analysis'] = df['Polarity'].apply(getAnalysis)
-# Show the dataframe
-df
+dafr['Analysis'] = dafr['Polarity'].apply(sentanalysis)
 
-# Printing positive tweets 
-print('Printing positive tweets:\n')
-j=1
-sortedDF = df.sort_values(by=['Polarity']) #Sort the tweets
-for i in range(0, sortedDF.shape[0] ):
-  if( sortedDF['Analysis'][i] == 'Positive'):
-    print(str(j) + ') '+ sortedDF['Tweets'][i])
-    print()
-    j= j+1
+# Displaying the updated dataframe
+dafr
 
-# Printing negative tweets  
-print('Printing negative tweets:\n')
-j=1
-sortedDF = df.sort_values(by=['Polarity'],ascending=False) #Sort the tweets
-for i in range(0, sortedDF.shape[0] ):
-  if( sortedDF['Analysis'][i] == 'Negative'):
-    print(str(j) + ') '+sortedDF['Tweets'][i])
-    print()
-    j=j+1
+# Creating a word cloud
+words = ' '.join([twts for twts in dafr['Tweets']])
+allwordscloud = WordCloud(width=600, height=400, random_state=21, max_font_size=100).generate(words)
 
-# Plotting 
-plt.figure(figsize=(8,6)) 
-for i in range(0, df.shape[0]):
-  plt.scatter(df["Polarity"][i], df["Subjectivity"][i], color='Blue') 
-# plt.scatter(x,y,color)   
-plt.title('Sentiment Analysis') 
-plt.xlabel('Polarity') 
-plt.ylabel('Subjectivity') 
+# Displaying the word cloud
+plt.imshow(allwordscloud, interpolation="bilinear")
+plt.axis('off')
 plt.show()
 
-# Printing the percentage of positive tweets
-ptweets = df[df.Analysis == 'Positive']
-ptweets = ptweets['Tweets']
-ptweets
+# Printing all positive tweets in an ordered list
+print('All positive tweets:\n')
+x=1
+sorteddata = dafr.sort_values(by=['Polarity']) # Sorting all tweets
+for y in range(0, sorteddata.shape[0] ):
+  if( sorteddata['Analysis'][y] == 'Positive'):
+    print(str(x) + ') '+ sorteddata['Tweets'][y])
+    print()
+    x= x+1
 
-round( (ptweets.shape[0] / df.shape[0]) * 100 , 1)
+# Printing the percentage of all positive tweets
+postwts = dafr[dafr.Analysis == 'Positive']
+postwts = postwts['Tweets']
+postwts
 
-# Printing the percentage of negative tweets
-ntweets = df[df.Analysis == 'Negative']
-ntweets = ntweets['Tweets']
-ntweets
+round((postwts.shape[0] / dafr.shape[0]) * 100 , 1)
 
-round( (ntweets.shape[0] / df.shape[0]) * 100, 1)
+# Printing all negative tweets in an ordered list 
+print('All negative tweets:\n')
+a=1
+sorteddata = dafr.sort_values(by=['Polarity'],ascending=False) # Sorting all tweets
+for b in range(0, sorteddata.shape[0] ):
+  if( sorteddata['Analysis'][b] == 'Negative'):
+    print(str(a) + ') '+sorteddata['Tweets'][b])
+    print()
+    a=a+1
 
-# Show the value counts
-df['Analysis'].value_counts()
+# Printing the percentage of all negative tweets
+negtwts = dafr[dafr.Analysis == 'Negative']
+negtwts = negtwts['Tweets']
+negtwts
 
-# Plotting and visualizing the counts
+round((negtwts.shape[0] / dafr.shape[0]) * 100, 1)
+
+# Distribution of tweets in different categories of sentiment
+dafr['Analysis'].value_counts()
+
+# Plotting the tweet distribution on a graph
 plt.title('Sentiment Analysis')
 plt.xlabel('Sentiment')
 plt.ylabel('Counts')
-df['Analysis'].value_counts().plot(kind = 'bar')
+dafr['Analysis'].value_counts().plot(kind = 'bar')
+plt.show()
+
+# Plotting a Subjectivity vs Polarity graph
+plt.figure(figsize=(10,8)) 
+for i in range(0, dafr.shape[0]):
+  plt.scatter(dafr["Polarity"][i], dafr["Subjectivity"][i], color='Red') 
+# plt.scatter(x,y,color)   
+plt.title('Tweet Sentiment Analysis') 
+plt.xlabel('Polarity') 
+plt.ylabel('Subjectivity') 
 plt.show()
